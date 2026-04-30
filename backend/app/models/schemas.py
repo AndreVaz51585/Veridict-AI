@@ -5,6 +5,7 @@ from typing import List, Optional
 # The BaseModel is the base class for creating data models in Pydantic, which provides data validation and parsing capabilities. By inheriting from BaseModel, you can define your own data models with specific fields and validation rules.
 
 class AnalysisRequest(BaseModel):
+    input_type: str = Field("text", description="Type of input: text or link")
     content: str = Field(..., description="The raw text, message body, email body, or URL to be analyzed")
 
 class ExtractedFeatures(BaseModel):

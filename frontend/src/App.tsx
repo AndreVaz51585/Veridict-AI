@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import axios from 'axios';
-import { ShieldCheck, ShieldAlert, ShieldX, Loader2, Info } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, ShieldX, Loader2, Info, Link as LinkIcon, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -10,6 +10,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 type RiskLevel = "Secure" | "Suspicious" | "Dangerous";
+type InputType = "text" | "link";
 
 interface AnalysisResponse {
   risk_score: number;
@@ -20,6 +21,7 @@ interface AnalysisResponse {
 
 function App() {
   const [input, setInput] = useState('');
+  const [inputType, setInputType] = useState<InputType>('text');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [result, setResult] = useState<AnalysisResponse | null>(null);
 
@@ -29,7 +31,10 @@ function App() {
     setResult(null);
 
     try {
-      const { data } = await axios.post<AnalysisResponse>('http://127.0.0.1:8000/api/v1/analyze', { content: input });
+      const { data } = await axios.post<AnalysisResponse>('http://127.0.0.1:8000/api/v1/analyze', { 
+        content: input,
+        input_type: inputType 
+      });
       setStatus('success');
       setResult(data);
     } catch (err) {
@@ -71,8 +76,8 @@ function App() {
         
         <div className="text-center">
           <div className="inline-flex items-center justify-center p-4 bg-indigo-100 rounded-full mb-6 relative">
-             <div className="absolute inset-0 bg-indigo-400 rounded-full blur-md opacity-20 animate-pulse"></div>
-             <ShieldCheck className="h-14 w-14 text-indigo-700 relative z-10" />
+            <div className="absolute inset-0 bg-indigo-400 rounded-full blur-md opacity-20 animate-pulse"></div>
+            <ShieldCheck className="h-14 w-14 text-indigo-700 relative z-10" />
           </div>
           <h1 className="text-5xl font-extrabold text-slate-900 tracking-tight">Veridict AI</h1>
           <p className="mt-4 text-xl text-slate-600 font-light max-w-2xl mx-auto">
@@ -80,27 +85,63 @@ function App() {
           </p>
         </div>
 
-        <div className="bg-white py-10 px-8 rounded-3xl shadow-xl border border-slate-100 relative overflow-hidden">
-           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
+        <div className="bg-white py-8 px-8 rounded-3xl shadow-xl border border-slate-100 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
+          
+          {/* TABS DE SELEÇÃO DE TIPO (LINK OU TEXTO) */}
+          <div className="flex bg-slate-100 p-1 mb-6 rounded-2xl">
+            <button
+              onClick={() => { setInputType('text'); setInput(''); }}
+              className={cn(
+                "flex-1 flex justify-center items-center py-3 px-4 rounded-xl text-sm font-bold transition-all",
+                inputType === 'text' ? "bg-white text-indigo-700 shadow-sm" : "text-slate-500 hover:text-slate-700"
+              )}
+            >
+              <FileText className="w-5 h-5 mr-2" />
+              Analyze Message / Text
+            </button>
+            <button
+              onClick={() => { setInputType('link'); setInput(''); }}
+              className={cn(
+                "flex-1 flex justify-center items-center py-3 px-4 rounded-xl text-sm font-bold transition-all",
+                inputType === 'link' ? "bg-white text-indigo-700 shadow-sm" : "text-slate-500 hover:text-slate-700"
+              )}
+            >
+              <LinkIcon className="w-5 h-5 mr-2" />
+              Analyze URL / Link
+            </button>
+          </div>
           
           <label htmlFor="content" className="block text-lg font-medium text-slate-800 mb-3">
-            Paste your content here
+            {inputType === 'text' ? "Paste the suspicious message here" : "Paste the web link (URL) here"}
           </label>
           <div className="mt-2 relative">
-            <textarea
-              id="content"
-              rows={4}
-              className="appearance-none block w-full px-5 py-4 border border-slate-200 rounded-xl bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:border-transparent transition-all sm:text-base resize-none shadow-inner"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-            />
+            {inputType === 'text' ? (
+              <textarea
+                id="content"
+                rows={5}
+                className="appearance-none block w-full px-5 py-4 border border-slate-200 rounded-xl bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all resize-none shadow-inner"
+                value={input}
+                placeholder="e.g. You have won a 100€ gift card! Click here http://tiny.cc/win..."
+                onChange={(e) => setInput(e.target.value)}
+              />
+            ) : (
+              <input
+                type="text"
+                id="content"
+                className="appearance-none block w-full px-5 py-4 border border-slate-200 rounded-xl bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all shadow-inner"
+                value={input}
+                placeholder="e.g. https://www.secure-login-attempt.run/auth"
+                onChange={(e) => setInput(e.target.value)}
+              />
+            )}
           </div>
           
           <div className="mt-8">
             <button
               onClick={analyzeContent}
               disabled={status === 'loading' || !input.trim()}
-              className="w-full flex justify-center items-center py-4 px-6 rounded-xl shadow-lg text-lg font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-[1.01] active:scale-[0.99]"
+              className="w-full flex justify-center items-center py-4 px-6 rounded-xl shadow-lg text-lg font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-4 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {status === 'loading' ? (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center">
@@ -112,18 +153,20 @@ function App() {
           </div>
         </div>
 
+        {/* ... (os teus antigos modais para display do Loading/Result continuam na mesma em baixo na aplicação final - podes copiar tudo isto para o teu App.tsx) */}
+        
         <AnimatePresence>
           {status === 'error' && (
-            <motion.div
-              key="error"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="p-6 rounded-2xl bg-red-100 border border-red-200 text-red-800 text-center shadow-md font-medium flex items-center justify-center mt-4"
-            >
-              <ShieldX className="w-6 h-6 mr-3" />
-              An error occurred while validating your input. Ensure the backend server is running!
-            </motion.div>
+             <motion.div
+               key="error"
+               initial={{ opacity: 0, y: 10 }}
+               animate={{ opacity: 1, y: 0 }}
+               exit={{ opacity: 0 }}
+               className="p-6 rounded-2xl bg-red-100 border border-red-200 text-red-800 text-center shadow-md font-medium flex items-center justify-center mt-4"
+             >
+               <ShieldX className="w-6 h-6 mr-3" />
+               An error occurred while validating your input. Ensure the backend server is running!
+             </motion.div>
           )}
         </AnimatePresence>
       </div>
@@ -136,7 +179,7 @@ function App() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 min-h-screen border-none bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 sm:p-6"
             onClick={() => setStatus('idle')}
-            style={{ width: "100vw", height: "100vh", position: "fixed", top: 0, left: 0 }}
+            style={{ width: "100%", height: "100%", position: "fixed", top: 0, left: 0 }}
           >
             <motion.div
               onClick={(e) => e.stopPropagation()}
@@ -146,12 +189,13 @@ function App() {
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               className={cn("w-full max-w-2xl p-8 sm:p-10 rounded-3xl border shadow-2xl relative overflow-y-auto max-h-[90vh]", getRiskColor(result.risk_level))}
             >
-              <button 
+               {/* MODAL CLOSE BUTTON */}
+               <button 
                 onClick={() => setStatus('idle')}
                 className="absolute top-4 right-4 p-2 rounded-full hover:bg-black/10 transition-colors"
-              >
+               >
                 <span className="font-bold text-xl">✕</span>
-              </button>
+               </button>
 
               <div className={cn("absolute top-0 left-0 w-full h-2", getRiskBg(result.risk_level))}></div>
               

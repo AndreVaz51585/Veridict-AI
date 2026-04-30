@@ -1,8 +1,63 @@
 class RuleEngine:
 
-    SUSPICIOUS_DOMAINS = ["xyz", "online", "top", "pw", "cc", "zip", "click", "link", "party", "gq", "run", "shop", "site", "vip", "club", "info", "pro", "biz", "loan", "men", "work", "date", "icu", "review"]
-    SHORTENERS = ["bit.ly", "tinyurl", "t.co", "is.gd", "goo.gl", "ow.ly", "cutt.ly", "buff.ly", "rebrand.ly"]
-    TYPOSQUATTING_TARGETS = ["google", "facebook", "amazon", "apple", "microsoft", "paypal", "netflix", "instagram", "whatsapp", "linkedin", "ctt", "financas"]
+    SUSPICIOUS_DOMAINS = [
+    "xyz", "online", "top", "pw", "cc", "zip", "click", "link", "party",
+    "gq", "run", "shop", "site", "vip", "club", "info", "pro", "biz",
+    "loan", "men", "work", "date", "icu", "review",
+
+    "best", "live", "app", "store", "website", "space", "fun",
+    "monster", "today", "world", "digital", "tech", "solutions",
+    "support", "help", "email", "cloud", "services",
+
+    "tk", "ml", "ga", "cf", "gq",  
+
+    "cam", "bar", "rest", "host", "press", "media", "agency"
+
+    ]
+    SHORTENERS = [
+    "bit.ly", "tinyurl", "t.co", "is.gd", "goo.gl", "ow.ly",
+    "cutt.ly", "buff.ly", "rebrand.ly",
+
+    "rb.gy", "shorturl.at", "lnkd.in", "trib.al",
+    "soo.gd", "v.gd", "qr.ae",
+
+    "linktr.ee", "linkin.bio", "bio.link",
+
+    "redirect", "go.", "go-link", "url", "click", "track"
+    ]
+
+
+    TYPOSQUATTING_TARGETS = [
+    # Big Tech
+    "google", "facebook", "meta", "instagram", "whatsapp",
+    "apple", "microsoft", "amazon", "paypal", "netflix",
+    "linkedin", "twitter", "x", "snapchat", "tiktok",
+    "discord", "telegram", "github", "dropbox",
+
+    # Finance / payments
+    "visa", "mastercard", "revolut", "wise", "stripe",
+    "bankofamerica", "chase", "hsbc", "santander",
+
+    # Crypto exchanges
+    "binance", "coinbase", "kraken", "okx", "bybit",
+
+    # Portugal 
+    "ctt", "financas", "autoridade tributaria", "seguranca social",
+    "mbway", "multibanco", "caixadirecta", "novobanco", "bpi",
+    "santanderpt", "millenniumbcp","emel"
+
+    # E-commerce / platforms
+    "aliexpress", "ebay", "shopify", "walmart", "etsy",
+
+    # Cloud / dev tools
+    "aws", "azure", "cloudflare", "digitalocean",
+
+    # Email / productivity
+    "gmail", "outlook", "office365", "teams", "zoom",
+
+    # Gaming (muito phishing aqui)
+    "steam", "epicgames", "riotgames", "playstation", "xbox"
+    ]
 
     @classmethod
     def analyze(cls, features) -> tuple[float, list[str]]:
@@ -28,7 +83,7 @@ class RuleEngine:
                     score += 0.5
                     flags.append(f"The link points to a highly risky domain extension ({domain}).")
                     
-                if any(shortener in domain for shortener in cls.SHORTENERS):
+                if any(domain == shortener or domain.endswith(f".{shortener}") for shortener in cls.SHORTENERS):
                     score += 0.8  # VERY HIGH RISK for shorteners
                     flags.append(f"The link uses a URL shortener ({domain}). Phishers often use this to hide their true destination.")
                     
@@ -38,9 +93,7 @@ class RuleEngine:
                         score += 0.6
                         flags.append(f"Possible typosquatting: Domain '{domain}' looks like it might be impersonating '{target}'.")
                         
-        import random
-        # Add random jitter between 0.01 and 0.08 to make the score appear more natural
-        jitter = random.uniform(0.01, 0.08)
-        final_score = min(max(score + jitter, 0.0), 1.0)
+        # No random jitter added, to ensure reproducible deterministic testing
+        final_score = min(max(score, 0.0), 1.0)
         
         return final_score, flags

@@ -60,13 +60,14 @@ class AIEngine:
         except Exception as e:
             print("Failed to save to ChromaDB:", e)
 
+            
     def generate_context(self, text: str, rule_flags: list, rep_flags: list, past_context: str) -> str:
         
         prompt = f"""
 You are Veridict AI, a cybersecurity expert assistant analyzing messages to protect users from phishing and social engineering.
-Your task is to analyze the user's message and the findings from our rule engine and reputation service, and return a JSON output interpreting the risk.
+Your task is to analyze ONLY the current user's message and the findings from our rule engine and reputation service.
 
-User's Message: "{text}"
+CURRENT MESSAGE FOR ANALYSIS: "{text}"
 
 Findings from Rule Engine:
 {', '.join(rule_flags) if rule_flags else "No immediate structural red flags found."}
@@ -76,26 +77,30 @@ Findings from Reputation Service:
 """
         if past_context:
             prompt += f"""
-Relevant History (similar known cases from Vector DB):
+---
+CONTEXT MATTERS (Do NOT mix these topics into the explanation for the current message):
+Below are historical instances of SIMILAR phrasing or links we caught in the past. 
+Use this ONLY to recognize patterns or determine if the CURRENT message matches a known phishing vector.
 {past_context}
+---
 """
 
         prompt += """
-Analyze the tone, context, findings, and overall urgency. Pay special attention to domains that do not resolve, use shorteners (like bit.ly), or are very recent, as these are massive red flags for phishing. Give a high penalty for typosquatting.
+Analyze the tone, context, findings, and overall urgency of the CURRENT MESSAGE. 
+Pay special attention to domains that do not resolve, use shorteners (like bit.ly), or are very recent, as these are massive red flags for phishing. Give a high penalty for typosquatting.
 
 Return only a valid JSON with the following structure:
 {
   "ai_score": float (between 0.0 for completely safe to 1.0 for extremely dangerous. Be assertive: if DNS fails or shortener used suspiciously, score > 0.80),
   "classification": string ("safe", "suspicious", or "dangerous"),
-  "explanation": "A clear, natural language explanation of why this risk score was given, and if the user should be worried",
+  "explanation": "A short, assertive list of 2-3 bullet points explaining the risk. Do not write a paragraph.",
   "recommendation": "A short, actionable piece of advice (e.g. 'Do not click the link.', 'Verify via official app.', etc)",
   "confidence": float (between 0.0 to 1.0)
 }
 
-Make sure your explanation is clear and actionable, and recommendations are varied. Output only the valid JSON. 
+Make sure your explanation is clear, highly relevant ONLY to the CURRENT MESSAGE, and outputs only valid JSON. 
 """
         return prompt
-
     def analyze(self, text: str, rule_flags: list, rep_flags: list) -> dict:
         
         # Query ChromaDB specifically for this text
